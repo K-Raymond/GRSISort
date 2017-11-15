@@ -180,7 +180,7 @@ int main(int argc, char *argv[]) {
                        "TGriffin.fGriffinLowGainHits.GetChannel().fNumber");
 
     mat_en->Write();
-    NonLinearityList->Write();
+    NonLinearityList->Write("Nonlinearities", TObject::kSingleKey);
     // Project Matrix
     // Cleanup
     delete mat_en;
