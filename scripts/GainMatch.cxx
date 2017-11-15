@@ -142,9 +142,6 @@ void CalibrateData(TTree *intree) {
         // Project a matrix for each channel
         TH1D *h_en = mat_en->ProjectionY(Form("h_%.2i", i), i + 1, i + 1);
 
-        // Calibration Peak Array
-        std::vector<TPeak *> FittedCaliPeaks;
-
         for (int k = 0; k < CaliPeakQnty; k++) {
             TSpectrum s;
             h_en->GetXaxis()->SetRangeUser(
@@ -158,7 +155,6 @@ void CalibrateData(TTree *intree) {
                                         DataPeak + WIDTH_PEAKS[k]);
             TempPeak->Fit(h_en, "MQ+");
             PeakCentroids.push_back(TempPeak->GetCentroid());
-            FittedCaliPeaks.push_back(TempPeak);
             delete TempPeak;
         }
 
@@ -230,8 +226,6 @@ void CalibrateData(TTree *intree) {
             channel->AddENGCoefficient((Float_t)c); // quadratic coefficient
 
         // Cleanup from loop
-        for (int k = 0; k < CaliPeakQnty; k++)
-            delete FittedCaliPeaks[k];
         delete fit;
         delete graph;
     }
