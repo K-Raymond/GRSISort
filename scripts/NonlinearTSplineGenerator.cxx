@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
                        "TGriffin.fGriffinLowGainHits.GetChannel().fNumber");
 
     // Make a list that will store all the energy differences
-    TList NonLinearityList = new Tlist();
+    TList* NonLinearityList = new TList();
 
     int nPeaks = gPeaks.size();
 
@@ -180,7 +180,7 @@ int main(int argc, char *argv[]) {
                        "TGriffin.fGriffinLowGainHits.GetChannel().fNumber");
 
     mat_en->Write();
-    NonLinearityList->Save();
+    NonLinearityList->Write();
     // Project Matrix
     // Cleanup
     delete mat_en;
