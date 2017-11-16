@@ -66,13 +66,41 @@ const std::vector<double_t> CALIBRATION_PEAKS = {121.7817, 244.6974, 964.057,
 const std::vector<double_t> WIDTH_PEAKS = {16, 20, 20, 20, 20, 30};
 */
 
-const std::vector<double_t> CALIBRATION_PEAKS = {121.7817, 244.6974, 964.057};
-const std::vector<double_t> WIDTH_PEAKS = {20, 20,  20};
+const std::vector<double_t> CALIBRATION_PEAKS = 
+    {138.2,
+    208.52,
+    445.98,
+    560.21,
+    683.06,
+    813.06,
+    813.20,
+    1050,65,
+    1173.52,
+    1229.64,
+    1504.10,
+    2042.77,
+    2327.82,
+    2475.06,
+    2677.4 };
 
-/*
-const std::vector<double_t> CALIBRATION_PEAKS = {315.42, 769.31, 1864.89, 2118.26, 3275.16};
-const std::vector<double_t> WIDTH_PEAKS = {20, 20, 20, 20, 20};
-*/
+const std::vector<double_t> WIDTH_PEAKS = 
+    {20, 
+    20,  
+    20,
+    20,
+    20,
+    20,
+    20,
+    20,
+    20,
+    20,
+    20,
+    20,
+    20,
+    20,
+    20,
+    20};
+
 //// END GLOBAL VARIABLES ////
 
 void CalibrateData(TTree *intree);
@@ -84,7 +112,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Setup the variables and object that will be used
-    TFile *infile = new TFile(argv[1]);
+    TFile *infile = new TFile(argv[1], "UPDATE");
 
     // We check if the file is open two ways. This might be exessive.
     if (infile == nullptr) {
@@ -120,6 +148,8 @@ void CalibrateData(TTree *intree) {
     if (CALIBRATION_PEAKS.size() != WIDTH_PEAKS.size()) {
         printf("Global variables that describe peaks are not sane\n"
                "Check CALIBRATION_PEAKS or WIDTH_PEAKS\n");
+        std::cout << "Note: CALIBRATION_PEAKS is " << CALIBRATION_PEAKS.size() << " elements.\n" ;
+        std::cout << "and WIDTH_PEAKS is " <<  WIDTH_PEAKS.size() << " elements.\n";
         exit(EXIT_FAILURE);
     }
 
@@ -193,7 +223,7 @@ void CalibrateData(TTree *intree) {
             fit = new TF1("fit", "pol1", 0, 5000);
             graph = new TGraph(CaliPeakQnty, CALIBRATION_PEAKS.data(),
                                PeakCentroids.data());
-            fitptr = graph->Fit(fit, "QS");
+            fitptr = graph->Fit(fit, "IEMNCFQS");
 
             double slope = fitptr->Parameter(1);
             double offset = fitptr->Parameter(0);

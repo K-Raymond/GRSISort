@@ -58,10 +58,17 @@
 const bool gIsFragmentFile = 0;
 
 // Input calibration peaks for finding nonlinearities
+/*
 const std::vector<double_t> gPeaks = {121.7817, 244.6974, 964.057,
-                                      1085.837, 1112.076, 1408.013};
+                                      1085.837, 1112.076};
 
-const std::vector<double_t> gWidths = {16, 20, 20, 20, 20, 20, 30};
+const std::vector<double_t> gWidths = {16, 20, 20, 13, 13};
+*/
+
+const std::vector<double_t> gPeaks = {315.42, 769.31, 1864.89,
+                                      2118.26, 3275.16};
+
+const std::vector<double_t> gWidths = {20, 20, 20, 20, 20};
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -73,6 +80,11 @@ int main(int argc, char *argv[]) {
 
     if (!pFile->IsOpen()) {
         printf("Failed to open file '%s'\n", argv[1]);
+        exit(EXIT_FAILURE);
+    }
+
+    if( gPeaks.size() != gWidths.size() ) {
+        printf("Number of peaks and widths are different!\n");
         exit(EXIT_FAILURE);
     }
 
@@ -98,8 +110,6 @@ int main(int argc, char *argv[]) {
     TGriffin *pGriff = nullptr;
     pTree->SetBranchAddress("TGriffin", &pGriff);
 
-    TChannel *pChannel = nullptr;
-
     printf("Generating empty matrix");
     // Load energy matrix
     TH2D *mat_en = new TH2D("mat_en", "", 64, 0, 64, 5000, 0, 5000);
@@ -116,14 +126,17 @@ int main(int argc, char *argv[]) {
 
     // Make a list that will store all the energy differences
     TList* NonLinearityList = new TList();
+    TList* NonLinearityTGraph = new TList();
+    /*
+    TMultiGraph* ResidualCryst[15];
+    for (int i = 0; i<16 ; i++)
+        ResidualCryst[i] = new TMultiGraph();
+    */
 
     int nPeaks = gPeaks.size();
 
     for (int i = 0; i < 64; i++) {
         printf("Starting new channel %d:\n", i);
-
-        // Reads in energy calibration
-        pChannel = TChannel::GetChannelByNumber(i);
 
         // Project the project the histogram for the current channel
         TH1D *h_en = mat_en->ProjectionY(Form("h_%.2i", i), i + 1, i + 1);
@@ -136,15 +149,17 @@ int main(int argc, char *argv[]) {
             double_t CalPeak, DataPeak, CalWidth;
             CalPeak = gPeaks[k];
             CalWidth = gWidths[k];
-            printf("Fitting peak %g ", gPeaks[k]);
+            printf("Fitting peak %g.\n", gPeaks[k]);
             // We use TSpectrum::Search() to grab all the peaks. Output is
-            // ordered
-            // from the most intense peak to the least.
+            // ordered from the most intense peak to the least.
             TSpectrum s;
             h_en->GetXaxis()->SetRangeUser(CalPeak - CalWidth,
                                            CalPeak + CalWidth);
             s.Search(h_en, 2, "", 0.25);    // Hist, Sigma, Opt, Threshold
             DataPeak = s.GetPositionX()[0]; // Grab most intense peak
+            if ( DataPeak < 1 ) // Errors commonly fall under this condition
+                continue;
+            printf("Roughly at %g ", DataPeak);
             h_en->GetXaxis()->UnZoom();
 
             // Fit the peak
@@ -163,13 +178,25 @@ int main(int argc, char *argv[]) {
             delete CurPeak;
         }
 
+        // Boundary Condtions
+        EngX.insert(EngX.begin(), 0.0);
+        EngDiff.insert(EngDiff.begin(),0.0);
+        EngX.insert(EngX.end(), 5000.0);
+        EngDiff.insert(EngDiff.end(),0.0);
+
+        // Make TSpines
         TSpline *TempSpline =
             new TSpline3("Energy Offset", EngX.data(), EngDiff.data(), nPeaks);
         NonLinearityList->Add(TempSpline);
         pGriff->LoadEnergyResidual(i, TempSpline);
+
+        // Make TGraph part of summary
+        TGraph* TempGraph = new TGraph(nPeaks, EngX.data(), EngDiff.data());
+        NonLinearityTGraph->Add(TempGraph);
+        //ResidualCryst[ static_cast <int>( std::floor( i / 4.0 ) )]->Add(ResidualChan[i]);
     }
 
-    printf("Overwriting energy matrix");
+    printf("Overwriting energy matrix\n");
     // Load in Energy data
     if (gIsFragmentFile)
         pTree->Project("mat_en", "TFragment.GetEnergy():"
@@ -179,8 +206,19 @@ int main(int argc, char *argv[]) {
                        "TGriffin.fGriffinLowGainHits.GetEnergy():"
                        "TGriffin.fGriffinLowGainHits.GetChannel().fNumber");
 
+    // Construct Residual Summary
+    //TCanvas* CResidualSum = new TCanvas();
+    //for( int i = 0 ; i < 16 ; i++ )
+    //    ResidualCryst[i]->Write();
+
+    printf("Writing Energy Matrix\n");
     mat_en->Write();
-    NonLinearityList->Write("Nonlinearities", TObject::kSingleKey);
+    //NonLinearityList->Write("Nonlinearities", TObject::kSingleKey);
+    printf("Writing Non-Linarities\n");
+    NonLinearityList->Write();
+    NonLinearityTGraph->Write();
+    printf("Writing Graphs\n");
+
     // Project Matrix
     // Cleanup
     delete mat_en;
