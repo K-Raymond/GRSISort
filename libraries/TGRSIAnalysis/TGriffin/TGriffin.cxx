@@ -104,7 +104,7 @@ TVector3 TGriffin::gCloverPosition[17] = {
             TMath::Sin(TMath::DegToRad() * (135.0)) * TMath::Sin(TMath::DegToRad() * (337.5)),
             TMath::Cos(TMath::DegToRad() * (135.0)))};
 
-std::map<int, TSpline*> TGriffin::fEnergyResiduals;
+std::map<int, TGraph*> TGriffin::fEnergyResiduals;
 
 TGriffin::TGriffin() : TGRSIDetector()
 {
@@ -159,7 +159,7 @@ void TGriffin::Clear(Option_t* opt)
    fCycleStart = 0;
 }
 
-void TGriffin::LoadEnergyResidual(int chan, TSpline* residual)
+void TGriffin::LoadEnergyResidual(int chan, TGraph* residual)
 {
    std::cout<<"Adding: "<<chan<<std::endl;
    fEnergyResiduals[chan] = residual;

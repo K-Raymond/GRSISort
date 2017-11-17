@@ -124,7 +124,7 @@ private:
    void SetBitNumber(enum EGriffinBits bit, Bool_t set) const;
    Bool_t TestBitNumber(enum EGriffinBits bit) const { return fGriffinBits.TestBit(bit); }
 
-   static std::map<int, TSpline*> fEnergyResiduals; //!<!
+   static std::map<int, TGraph*> fEnergyResiduals; //!<!
 
    // const std::tuple<std::vector<TGriffinHit> *, std::vector<TGriffinHit> *, std::vector<UShort_t>*> fLowGainTuple =
    // std::make_tuple(&fGriffinLowGainHits,&fAddbackLowGainHits,&fAddbackLowGainFrags);
@@ -140,7 +140,7 @@ public:
    void FixLowGainCrossTalk();
    void FixHighGainCrossTalk();
 
-   static void LoadEnergyResidual(int chan, TSpline* residual);
+   static void LoadEnergyResidual(int chan, TGraph* residual);
    static Double_t GetEnergyNonlinearity(int chan, double energy);
 
 private:

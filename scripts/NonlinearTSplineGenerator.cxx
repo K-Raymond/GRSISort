@@ -103,9 +103,6 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    // TGRSIRunInfo* runInfo = (TGRSIRunInfo*) pFile->Get("TGRSIRunInfo");
-    // int runNum = runInfo->RunNumber();
-
     // Setup TGriffin
     TGriffin *pGriff = nullptr;
     pTree->SetBranchAddress("TGriffin", &pGriff);
@@ -125,13 +122,7 @@ int main(int argc, char *argv[]) {
                        "TGriffin.fGriffinLowGainHits.GetChannel().fNumber");
 
     // Make a list that will store all the energy differences
-    TList* NonLinearityList = new TList();
-    TList* NonLinearityTGraph = new TList();
-    /*
-    TMultiGraph* ResidualCryst[15];
-    for (int i = 0; i<16 ; i++)
-        ResidualCryst[i] = new TMultiGraph();
-    */
+    TList* LNonlinearitiesGraphs = new TList();
 
     int nPeaks = gPeaks.size();
 
@@ -179,25 +170,31 @@ int main(int argc, char *argv[]) {
         }
 
         // Boundary Condtions
+        /*
         EngX.insert(EngX.begin(), 0.0);
         EngDiff.insert(EngDiff.begin(),0.0);
         EngX.insert(EngX.end(), 5000.0);
         EngDiff.insert(EngDiff.end(),0.0);
+        */
 
         // Make TSpines
+        // Commented out due to changing TSplines to TGraphs in TGriffin
+        /*
         TSpline *TempSpline =
             new TSpline3("Energy Offset", EngX.data(), EngDiff.data(), nPeaks);
         NonLinearityList->Add(TempSpline);
         pGriff->LoadEnergyResidual(i, TempSpline);
-
-        // Make TGraph part of summary
-        TGraph* TempGraph = new TGraph(nPeaks, EngX.data(), EngDiff.data());
-        NonLinearityTGraph->Add(TempGraph);
-        //ResidualCryst[ static_cast <int>( std::floor( i / 4.0 ) )]->Add(ResidualChan[i]);
+        */
+        // Make TGraph part of summary with two addtional end points
+        TGraph* TempGraph = new TGraph(nPeaks , EngX.data(), EngDiff.data());
+        TempGraph->SetTitle("");
+        LNonlinearitiesGraphs->Add(TempGraph);
+        pGriff->LoadEnergyResidual(i, TempGraph);
     }
 
     printf("Overwriting energy matrix\n");
-    // Load in Energy data
+    // Load in Energy data and construct an energy matrix including
+    // the compensated energy residuals
     if (gIsFragmentFile)
         pTree->Project("mat_en", "TFragment.GetEnergy():"
                                  "TFragment.GetChannelNumber()");
@@ -206,18 +203,46 @@ int main(int argc, char *argv[]) {
                        "TGriffin.fGriffinLowGainHits.GetEnergy():"
                        "TGriffin.fGriffinLowGainHits.GetChannel().fNumber");
 
-    // Construct Residual Summary
-    //TCanvas* CResidualSum = new TCanvas();
-    //for( int i = 0 ; i < 16 ; i++ )
-    //    ResidualCryst[i]->Write();
-
     printf("Writing Energy Matrix\n");
     mat_en->Write();
-    //NonLinearityList->Write("Nonlinearities", TObject::kSingleKey);
     printf("Writing Non-Linarities\n");
-    NonLinearityList->Write();
-    NonLinearityTGraph->Write();
+    TDirectory *NonLinearDirectory = pFile->mkdir("Non_Linearities");
+    NonLinearDirectory->cd();
+    LNonlinearitiesGraphs->Write();
+    pFile->cd();
+
     printf("Writing Graphs\n");
+    // Compose a graph that gives an overview of all the residuals.
+    TCanvas * c1 = new TCanvas("Residuals", "Residuals", 800, 800);
+    c1->SetFrameBorderMode(0);
+    c1->Divide(4,4);
+    TIter next(LNonlinearitiesGraphs->MakeIterator());
+    for( int i = 1 ; i <= 16 ; i++ ) {
+        // cd(0) is the canvas itself
+        // Iterate through all the TPads
+        c1->cd(i);
+        gStyle->SetPadLeftMargin(0.05);
+        gStyle->SetPadBottomMargin(0.05);
+        gStyle->SetPadRightMargin(0.05);
+        gStyle->SetPadTopMargin(0.05);
+        TMultiGraph* mg = new TMultiGraph();
+        for(int k = 0; k < 4; k++ ) {
+            // Iterate through the list to produce four data sets in
+            // the multigraph 
+            TGraph* obj = (TGraph*) next();
+            obj->SetMarkerStyle(31); // kStar
+            obj->SetLineColor(k+1);
+            obj->SetMarkerColor(k+1); // Nice marker colors
+            //obj->Draw();
+            mg->Add(obj);
+        }
+        //mg->SetTitle(Form("Cluster %d", i));
+        //mg->GetYaxis()->SetRangeUser(-2,2);
+        mg->Draw("APL");
+    }
+    c1->Update();
+    c1->Draw();
+    c1->Write("Non-Linearity Overview");
 
     // Project Matrix
     // Cleanup
