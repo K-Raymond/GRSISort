@@ -3,10 +3,34 @@
  *
  * Created by Kurtis Raymond (kraymond@sfu.ca)
  *
- * This script should operate on a TTree that has had its singles
- * channels already gain matched.
+ * The analysis tree loaded in should have its channels already
+ * gain matched.
+ *
+ * This script takes in an analsys tree from the provided root file,
+ * measures the amount the peaks specified (in gPeaks) from the measured data.
+ *
+ * The resulting TGraphs are stored in a directory "Energy_Residuals" in the
+ * provided root file.
  *
  */
+
+/* 
+ * Example loading script. Put at the begining of your other analysis scripts
+ * such as LeanMatricies.cxx, after the TGriffin address has been loaded.
+ *
+ * Change pGriff to the TGriffin address pointer variable.
+
+    if( gFile->cd("Energy_Residuals") ) {
+        printf("Energy residual calibration data found. Loading...\n");
+
+        TGraph* TempResidual;
+        for( int i = 0 ; i < 64 ; i++ ) {
+            gDirectory->GetObject(Form("Graph;%d",i), TempResidual);
+            pGriff->LoadEnergyResidual(TempResidual);
+        }
+        gFile->cd(); // Return to the top directory
+        printf("Done.\n");
+ * /
 
 #include <algorithm>
 #include <cmath>
@@ -65,10 +89,14 @@ const std::vector<double_t> gPeaks = {121.7817, 244.6974, 964.057,
 const std::vector<double_t> gWidths = {16, 20, 20, 13, 13};
 */
 
+// Key peaks for Fatmia's data
 const std::vector<double_t> gPeaks = {315.42, 769.31, 1864.89,
                                       2118.26, 3275.16};
 
 const std::vector<double_t> gWidths = {20, 20, 20, 20, 20};
+
+// Used for displaying individual peak fitting information
+const bool gPrintFlag = true;
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -140,17 +168,24 @@ int main(int argc, char *argv[]) {
             double_t CalPeak, DataPeak, CalWidth;
             CalPeak = gPeaks[k];
             CalWidth = gWidths[k];
-            printf("Fitting peak %g.\n", gPeaks[k]);
+
             // We use TSpectrum::Search() to grab all the peaks. Output is
             // ordered from the most intense peak to the least.
+            if (gPrintFlag)
+                printf("Fitting peak %g .", gPeaks[k]);
             TSpectrum s;
             h_en->GetXaxis()->SetRangeUser(CalPeak - CalWidth,
                                            CalPeak + CalWidth);
-            s.Search(h_en, 2, "", 0.25);    // Hist, Sigma, Opt, Threshold
+            s.Search(h_en, 2, "", 0.05);    // Hist, Sigma, Opt, Threshold
             DataPeak = s.GetPositionX()[0]; // Grab most intense peak
-            if ( DataPeak < 1 ) // Errors commonly fall under this condition
+
+            if ( DataPeak < 1 ) { // Errors commonly fall under this condition
+                printf("Could not find Peak, Skipping.\n");
                 continue;
-            printf("Roughly at %g ", DataPeak);
+            }
+
+            if (gPrintFlag)
+                printf("Roughly at %g ", DataPeak);
             h_en->GetXaxis()->UnZoom();
 
             // Fit the peak
@@ -160,9 +195,11 @@ int main(int argc, char *argv[]) {
             DataPeak = CurPeak->GetCentroid();
 
             // Report the peak
-            printf("... found at %g, ", DataPeak);
+            if (gPrintFlag)
+                printf("... found at %g, ", DataPeak);
             EngDiff.push_back(CalPeak - DataPeak);
-            printf(" difference of %g\n", EngDiff.back());
+            if (gPrintFlag)
+                printf(" difference of %g\n", EngDiff.back());
             EngX.push_back(gPeaks[k]);
 
             // Loop Cleanup
@@ -170,6 +207,7 @@ int main(int argc, char *argv[]) {
         }
 
         // Boundary Condtions
+        // Unsure if these are needed in TGraph or TSpline
         /*
         EngX.insert(EngX.begin(), 0.0);
         EngDiff.insert(EngDiff.begin(),0.0);
@@ -185,6 +223,7 @@ int main(int argc, char *argv[]) {
         NonLinearityList->Add(TempSpline);
         pGriff->LoadEnergyResidual(i, TempSpline);
         */
+
         // Make TGraph part of summary with two addtional end points
         TGraph* TempGraph = new TGraph(nPeaks , EngX.data(), EngDiff.data());
         TempGraph->SetTitle("");
@@ -205,8 +244,15 @@ int main(int argc, char *argv[]) {
 
     printf("Writing Energy Matrix\n");
     mat_en->Write();
+
+    // We want to make an extra directory to store all of our energy
+    // residuals in. The assumption is made that these TGraphs are
+    // written in order.
+    //
+    // See sample_load_code.cxx for details on how to load these.
+
     printf("Writing Non-Linarities\n");
-    TDirectory *NonLinearDirectory = pFile->mkdir("Non_Linearities");
+    TDirectory *NonLinearDirectory = pFile->mkdir("Energy_Residuals");
     NonLinearDirectory->cd();
     LNonlinearitiesGraphs->Write();
     pFile->cd();
@@ -221,10 +267,10 @@ int main(int argc, char *argv[]) {
         // cd(0) is the canvas itself
         // Iterate through all the TPads
         c1->cd(i);
-        gStyle->SetPadLeftMargin(0.05);
-        gStyle->SetPadBottomMargin(0.05);
-        gStyle->SetPadRightMargin(0.05);
-        gStyle->SetPadTopMargin(0.05);
+        gPad->SetLeftMargin(0.05);
+        gPad->SetBottomMargin(0.05);
+        gPad->SetRightMargin(0.00);
+        gPad->SetTopMargin(0.00);
         TMultiGraph* mg = new TMultiGraph();
         for(int k = 0; k < 4; k++ ) {
             // Iterate through the list to produce four data sets in
@@ -233,11 +279,8 @@ int main(int argc, char *argv[]) {
             obj->SetMarkerStyle(31); // kStar
             obj->SetLineColor(k+1);
             obj->SetMarkerColor(k+1); // Nice marker colors
-            //obj->Draw();
             mg->Add(obj);
         }
-        //mg->SetTitle(Form("Cluster %d", i));
-        //mg->GetYaxis()->SetRangeUser(-2,2);
         mg->Draw("APL");
     }
     c1->Update();
