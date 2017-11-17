@@ -409,8 +409,8 @@ Bool_t TPeak::Fit(TH1* fitHist, Option_t* opt)
    Copy(*fitHist->GetListOfFunctions()->Last());
    //  if(optstr.Contains("+"))
    //    Copy(*fitHist->GetListOfFunctions()->Before(fitHist->GetListOfFunctions()->Last()));
-
-   Print("+");
+   if(print_flag)
+       Print("+");
    delete tmppeak;
    return true;
 }
