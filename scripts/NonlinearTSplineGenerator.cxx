@@ -30,7 +30,7 @@
         }
         gFile->cd(); // Return to the top directory
         printf("Done.\n");
- * /
+ */
 
 #include <algorithm>
 #include <cmath>
