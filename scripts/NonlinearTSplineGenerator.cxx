@@ -90,7 +90,7 @@ const std::vector<double_t> gPeaks = {121.7817, 244.6974, 964.057,
 const std::vector<double_t> gWidths = {16, 20, 20, 13, 13};
 */
 
-// Key peaks for Fatmia's data
+// Key peaks for 129Sn
 const std::vector<double_t> gPeaks = {315.42, 769.31, 1864.89,
                                       2118.26, 3275.16};
 
