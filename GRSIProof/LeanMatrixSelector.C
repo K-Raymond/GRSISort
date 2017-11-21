@@ -123,12 +123,11 @@ void LeanMatrixSelector::FillHistograms() {
                 }
             }
 
-            //  fH2.at("ggE")->Fill(fGrif->GetGriffinHit(i)->GetEnergy(),
+            fH2.at("ggE")->Fill(fGrif->GetGriffinHit(i)->GetEnergy(),
             //  fGrif->GetGriffinhit()
         }
         // Loop over all sceptar hits
         for (auto j = 0; j < fScep->GetMultiplicity(); ++j) {
-
             //	  bTimeInCycle = (long
             // long)((long)s->GetHit(j)->GetTime())%CycleEnd);
             if (PromptCoincidence(fGrif->GetGriffinHit(i),

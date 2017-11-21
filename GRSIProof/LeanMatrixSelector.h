@@ -46,6 +46,9 @@ class LeanMatrixSelector : public TGRSISelector {
     double CycleBeamOffStart = 0;
     long CycleEnd = 0;
 
+    // Support for residuals
+    std::vector<TGraph*> gEngResidualVec;
+
   public:
     TGriffin *fGrif; // Pointers to spot that events will be
     TSceptar *fScep;
@@ -68,6 +71,7 @@ class LeanMatrixSelector : public TGRSISelector {
 
 #ifdef LeanMatrixSelector_cxx
 void LeanMatrixSelector::InitializeBranches(TTree *tree) {
+    
     if (!tree)
         return;
     if (tree->SetBranchAddress("TGriffin", &fGrif) == TTree::kMissingBranch) {
@@ -75,6 +79,20 @@ void LeanMatrixSelector::InitializeBranches(TTree *tree) {
     }
     if (tree->SetBranchAddress("TSceptar", &fScep) == TTree::kMissingBranch) {
         fScep = new TSceptar;
+    }
+       // Add in residuals
+    printf("Attemping to load residuals...");
+    if( gFile->cd("Energy_Residuals") ) {
+        printf(" found, loading\n");
+        TGraph* TempResidual;
+        for( int i = 0; i < 64 ; i++ ) {
+            gDirectory->GetObject(Form("Graph;%d", i), TempResidual );
+            //fGrif->LoadEnergyResidual(i,TempResidual);
+        }
+        gFile->cd();
+        printf("Residuals loaded!\n");
+    } else {
+        printf(" no residuals found.\n");
     }
 }
 

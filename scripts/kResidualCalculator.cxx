@@ -26,7 +26,7 @@
         TGraph* TempResidual;
         for( int i = 0 ; i < 64 ; i++ ) {
             gDirectory->GetObject(Form("Graph;%d",i), TempResidual);
-            pGriff->LoadEnergyResidual(TempResidual);
+            pGriff->LoadEnergyResidual(i, TempResidual);
         }
         gFile->cd(); // Return to the top directory
         printf("Done.\n");
@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    TFile *pFile = new TFile(argv[1], "UPDATE");
+    TFile *pFile = new TFile(argv[1], "update");
 
     if (!pFile->IsOpen()) {
         printf("Failed to open file '%s'\n", argv[1]);
@@ -198,7 +198,8 @@ int main(int argc, char *argv[]) {
             // Report the peak
             if (gPrintFlag)
                 printf("... found at %g, ", DataPeak);
-            EngDiff.push_back(CalPeak - DataPeak);
+            // We compute the quantanty that will be subtracted by the data
+            EngDiff.push_back( DataPeak - CalPeak );
             if (gPrintFlag)
                 printf(" difference of %g\n", EngDiff.back());
             EngX.push_back(gPeaks[k]);
@@ -253,7 +254,14 @@ int main(int argc, char *argv[]) {
     // See sample_load_code.cxx for details on how to load these.
 
     printf("Writing Non-Linarities\n");
-    TDirectory *NonLinearDirectory = pFile->mkdir("Energy_Residuals");
+    TDirectory* NonLinearDirectory;
+    if ( pFile->cd("Energy_Residuals") ) {
+        NonLinearDirectory = gDirectory; // Set to current directory
+        NonLinearDirectory->Delete("Graph;*");
+    }
+    else
+        NonLinearDirectory = pFile->mkdir("Energy_Residuals");
+
     NonLinearDirectory->cd();
     LNonlinearitiesGraphs->Write();
     pFile->cd();
