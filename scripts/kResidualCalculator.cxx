@@ -152,6 +152,7 @@ int main(int argc, char *argv[]) {
 
     // Make a list that will store all the energy differences
     TList* LNonlinearitiesGraphs = new TList();
+    TList* LNonlinearitiesGraphsErr = new TList();
 
     int nPeaks = gPeaks.size();
 
@@ -162,11 +163,14 @@ int main(int argc, char *argv[]) {
         TH1D *h_en = mat_en->ProjectionY(Form("h_%.2i", i), i + 1, i + 1);
 
         std::vector<double_t> EngDiff = {};
+        std::vector<double_t> EngDiffErr = {};
         std::vector<double_t> EngX = {};
+        std::vector<double_t> EngXErr = {};
 
         // Fit all the peaks in our calibration and collect their centroids
         for (int k = 0; k < nPeaks; k++) {
             double_t CalPeak, DataPeak, CalWidth;
+            double_t DataPeakErr;
             CalPeak = gPeaks[k];
             CalWidth = gWidths[k];
 
@@ -194,12 +198,14 @@ int main(int argc, char *argv[]) {
                 new TPeak(DataPeak, DataPeak - CalWidth, DataPeak + CalWidth);
             CurPeak->Fit(h_en, "MQ+"); // Quiet Flag
             DataPeak = CurPeak->GetCentroid();
+            DataPeakErr = CurPeak->GetCentroidErr();
 
             // Report the peak
             if (gPrintFlag)
                 printf("... found at %g, ", DataPeak);
             // We compute the quantanty that will be subtracted by the data
             EngDiff.push_back( DataPeak - CalPeak );
+            EngDiffErr.push_back(DataPeakErr);
             if (gPrintFlag)
                 printf(" difference of %g\n", EngDiff.back());
             EngX.push_back(gPeaks[k]);
@@ -231,6 +237,10 @@ int main(int argc, char *argv[]) {
         TempGraph->SetTitle("");
         LNonlinearitiesGraphs->Add(TempGraph);
         pGriff->LoadEnergyResidual(i, TempGraph);
+
+        TGraphErrors* TempGraphErr = new TGraphErrors(nPeaks, EngX.data(),
+                EngDiff.data(), EngDiffErr.data(), EngDiffErr.data() );
+        LNonlinearitiesGraphsErr->Add(TempGraphErr);
     }
 
     printf("Overwriting energy matrix\n");
@@ -271,7 +281,7 @@ int main(int argc, char *argv[]) {
     TCanvas * c1 = new TCanvas("Residuals", "Residuals", 800, 800);
     c1->SetFrameBorderMode(0);
     c1->Divide(4,4);
-    TIter next(LNonlinearitiesGraphs->MakeIterator());
+    TIter next(LNonlinearitiesGraphsErr->MakeIterator());
     for( int i = 1 ; i <= 16 ; i++ ) {
         // cd(0) is the canvas itself
         // Iterate through all the TPads
