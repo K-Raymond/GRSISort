@@ -236,7 +236,7 @@ int main(int argc, char *argv[]) {
         TGraph* TempGraph = new TGraph(nPeaks , EngX.data(), EngDiff.data());
         TempGraph->SetTitle("");
         LNonlinearitiesGraphs->Add(TempGraph);
-        pGriff->LoadEnergyResidual(i, TempGraph);
+        //pGriff->LoadEnergyResidual(i, TempGraph);
 
         TGraphErrors* TempGraphErr = new TGraphErrors(nPeaks, EngX.data(),
                 EngDiff.data(), EngDiffErr.data(), EngDiffErr.data() );
@@ -244,18 +244,24 @@ int main(int argc, char *argv[]) {
     }
 
     printf("Overwriting energy matrix\n");
+    TH2D *mat_en_after = new TH2D("mat_en_after", "", 64, 0, 64, 5000, 0, 5000);
+    TIter next = TIter(LNonlinearitiesGraphs->MakeIterator());
+    for ( int i = 0 ; i < 64 ; i++ ) {
+        TGraph* obj = (TGraph*) next();
+        pGriff->LoadEnergyResidual( i , obj );
+    }
     // Load in Energy data and construct an energy matrix including
     // the compensated energy residuals
     if (gIsFragmentFile)
-        pTree->Project("mat_en", "TFragment.GetEnergy():"
+        pTree->Project("mat_en_after", "TFragment.GetEnergy():"
                                  "TFragment.GetChannelNumber()");
     else
-        pTree->Project("mat_en",
+        pTree->Project("mat_en_after",
                        "TGriffin.fGriffinLowGainHits.GetEnergy():"
                        "TGriffin.fGriffinLowGainHits.GetChannel().fNumber");
 
     printf("Writing Energy Matrix\n");
-    mat_en->Write();
+    mat_en_after->Write();
 
     // We want to make an extra directory to store all of our energy
     // residuals in. The assumption is made that these TGraphs are
@@ -281,7 +287,7 @@ int main(int argc, char *argv[]) {
     TCanvas * c1 = new TCanvas("Residuals", "Residuals", 800, 800);
     c1->SetFrameBorderMode(0);
     c1->Divide(4,4);
-    TIter next(LNonlinearitiesGraphsErr->MakeIterator());
+    next = TIter(LNonlinearitiesGraphsErr->MakeIterator());
     for( int i = 1 ; i <= 16 ; i++ ) {
         // cd(0) is the canvas itself
         // Iterate through all the TPads
@@ -294,7 +300,7 @@ int main(int argc, char *argv[]) {
         for(int k = 0; k < 4; k++ ) {
             // Iterate through the list to produce four data sets in
             // the multigraph 
-            TGraph* obj = (TGraph*) next();
+            TGraphErrors* obj = (TGraphErrors*) next();
             obj->SetMarkerStyle(31); // kStar
             obj->SetLineColor(k+1);
             obj->SetMarkerColor(k+1); // Nice marker colors
