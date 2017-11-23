@@ -136,6 +136,9 @@ int main(int argc, char *argv[]) {
     TGriffin *pGriff = nullptr;
     pTree->SetBranchAddress("TGriffin", &pGriff);
 
+    TChannel *pChannel = nullptr;
+    TChannel::ReadCalFromTree(pTree);
+
     printf("Generating empty matrix");
     // Load energy matrix
     TH2D *mat_en = new TH2D("mat_en", "", 64, 0, 64, 5000, 0, 5000);
@@ -159,12 +162,15 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < 64; i++) {
         printf("Starting new channel %d:\n", i);
 
+        pChannel = TChannel::GetChannelByNumber(i);
+
         // Project the project the histogram for the current channel
         TH1D *h_en = mat_en->ProjectionY(Form("h_%.2i", i), i + 1, i + 1);
 
         std::vector<double_t> EngDiff = {};
         std::vector<double_t> EngDiffErr = {};
         std::vector<double_t> EngX = {};
+        std::vector<double_t> ChargeX = {};
         std::vector<double_t> EngXErr = {};
 
         // Fit all the peaks in our calibration and collect their centroids
@@ -210,6 +216,13 @@ int main(int argc, char *argv[]) {
                 printf(" difference of %g\n", EngDiff.back());
             EngX.push_back(gPeaks[k]);
 
+            // Compute the charges from reported values to use as our xvalues
+            // TODO: find a cleaner way of doing this
+            double_t offset = pChannel->GetENGCoeff()[0];
+            double_t slope = pChannel->GetENGCoeff()[1];
+            double_t Charge = (DataPeak - offset)/slope;
+            ChargeX.push_back(Charge);
+
             // Loop Cleanup
             delete CurPeak;
         }
@@ -232,20 +245,23 @@ int main(int argc, char *argv[]) {
         pGriff->LoadEnergyResidual(i, TempSpline);
         */
 
-        // Make TGraph part of summary with two addtional end points
-        TGraph* TempGraph = new TGraph(nPeaks , EngX.data(), EngDiff.data());
+        // Make a TGraph that can be used for interpolating the values
+        //TGraph* TempGraph = new TGraph(nPeaks , EngX.data(), EngDiff.data());
+        TGraph* TempGraph = new TGraph(nPeaks, ChargeX.data(), EngDiff.data());
         TempGraph->SetTitle("");
         LNonlinearitiesGraphs->Add(TempGraph);
         //pGriff->LoadEnergyResidual(i, TempGraph);
 
-        TGraphErrors* TempGraphErr = new TGraphErrors(nPeaks, EngX.data(),
+        // Make a graph that represents this channel's offsets and errors
+        TGraphErrors* TempGraphErr = new TGraphErrors(nPeaks, ChargeX.data(),
                 EngDiff.data(), EngDiffErr.data(), EngDiffErr.data() );
         LNonlinearitiesGraphsErr->Add(TempGraphErr);
     }
 
+    TIter next = TIter(LNonlinearitiesGraphs->MakeIterator());
+    /*
     printf("Overwriting energy matrix\n");
     TH2D *mat_en_after = new TH2D("mat_en_after", "", 64, 0, 64, 5000, 0, 5000);
-    TIter next = TIter(LNonlinearitiesGraphs->MakeIterator());
     for ( int i = 0 ; i < 64 ; i++ ) {
         TGraph* obj = (TGraph*) next();
         pGriff->LoadEnergyResidual( i , obj );
@@ -262,6 +278,7 @@ int main(int argc, char *argv[]) {
 
     printf("Writing Energy Matrix\n");
     mat_en_after->Write();
+    */
 
     // We want to make an extra directory to store all of our energy
     // residuals in. The assumption is made that these TGraphs are
