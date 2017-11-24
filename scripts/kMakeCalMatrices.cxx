@@ -338,7 +338,7 @@ int main(int argc, char **argv) {
         int runnumber = runInfo->RunNumber();
         int subrunnumber = runInfo->SubRunNumber();
         outfile = new TFile(
-            Form("matrix%05d_%03d.root", runnumber, subrunnumber), "recreate");
+            Form("calmatrix%05d_%03d.root", runnumber, subrunnumber), "recreate");
     } else {
         outfile = new TFile(argv[2], "recreate");
     }

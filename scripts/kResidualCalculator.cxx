@@ -214,14 +214,16 @@ int main(int argc, char *argv[]) {
             EngDiffErr.push_back(DataPeakErr);
             if (gPrintFlag)
                 printf(" difference of %g\n", EngDiff.back());
-            EngX.push_back(gPeaks[k]);
+            EngX.push_back(DataPeak);
 
             // Compute the charges from reported values to use as our xvalues
-            // TODO: find a cleaner way of doing this
+            // Nov 24th: This is not needed!
+            /*
             double_t offset = pChannel->GetENGCoeff()[0];
             double_t slope = pChannel->GetENGCoeff()[1];
             double_t Charge = (DataPeak - offset)/slope;
             ChargeX.push_back(Charge);
+            */
 
             // Loop Cleanup
             delete CurPeak;
@@ -247,13 +249,13 @@ int main(int argc, char *argv[]) {
 
         // Make a TGraph that can be used for interpolating the values
         //TGraph* TempGraph = new TGraph(nPeaks , EngX.data(), EngDiff.data());
-        TGraph* TempGraph = new TGraph(nPeaks, ChargeX.data(), EngDiff.data());
+        TGraph* TempGraph = new TGraph(nPeaks, EngX.data(), EngDiff.data());
         TempGraph->SetTitle("");
         LNonlinearitiesGraphs->Add(TempGraph);
         //pGriff->LoadEnergyResidual(i, TempGraph);
 
         // Make a graph that represents this channel's offsets and errors
-        TGraphErrors* TempGraphErr = new TGraphErrors(nPeaks, ChargeX.data(),
+        TGraphErrors* TempGraphErr = new TGraphErrors(nPeaks, EngX.data(),
                 EngDiff.data(), EngDiffErr.data(), EngDiffErr.data() );
         LNonlinearitiesGraphsErr->Add(TempGraphErr);
     }
