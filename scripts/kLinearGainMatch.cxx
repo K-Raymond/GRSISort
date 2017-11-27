@@ -57,7 +57,7 @@ const bool gIsCalibration = 0;
 
 // Input the two peaks for fitting
 //  {peak, fit window}
-const double_t gCalPeaks[2][2] = { {315.42, 20}, {2118.26, 20} };
+const double_t gCalPeaks[2][2] = { {315.42, 20}, {1864.89, 20} };
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -136,8 +136,8 @@ int main(int argc, char *argv[]) {
         pChannel->AddENGCoefficient( static_cast<Float_t>( newSlope ) );
     }
 
-    //TChannel::WriteToRoot();
-    TChannel::WriteCalFile("./newtest.cal");
+    TChannel::WriteToRoot();
+    //TChannel::WriteCalFile("./newtest.cal");
 
     exit(EXIT_SUCCESS);
 }
