@@ -19,14 +19,17 @@
  * such as LeanMatricies.cxx, after the TGriffin address has been loaded.
  *
  * Change pGriff to the TGriffin address pointer variable.
+ *
+ * Note that the TGraphs are stored from 1->64, but they are loaded in through
+ * LoadEnergyResidual from 0->63.
 
     if( gFile->cd("Energy_Residuals") ) {
         printf("Energy residual calibration data found. Loading...\n");
 
         TGraph* TempResidual;
-        for( int i = 0 ; i < 64 ; i++ ) {
+        for( int i = 1 ; i <= 64 ; i++ ) {
             gDirectory->GetObject(Form("Graph;%d",i), TempResidual);
-            pGriff->LoadEnergyResidual(i, TempResidual);
+            pGriff->LoadEnergyResidual( i-1, TempResidual);
         }
         gFile->cd(); // Return to the top directory
         printf("Done.\n");
@@ -91,17 +94,44 @@ const std::vector<double_t> gWidths = {16, 20, 20, 13, 13};
 */
 
 // Key peaks for 129Sn
-const std::vector<double_t> gPeaks = {315.42, 769.31, 1864.89,
-                                      2118.26, 3275.16};
+const std::vector<double_t> gPeaks = {
+    315.42,
+    511.0,
+    570.41,
+    645.2,
+    728.53,
+    769.31,
+//    907.34, // Double Peak
+    1008.53,
+    1054.3,
+    1222.51,
+//    1781.54,
+    1864.89,
+    2118.26,
+    2546.61};
 
-const std::vector<double_t> gWidths = {20, 20, 20, 20, 20};
+const std::vector<double_t> gWidths = {
+    20,
+    20,
+    20,
+    20,
+    20,
+    20,
+//    20,
+    20,
+    15,
+    20,
+//    20,
+    20,
+    20,
+    20};
 
 // Used for displaying individual peak fitting information
 const bool gPrintFlag = true;
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
-        printf(" Usage: %s <fragment or analysis tree file> ).\n", argv[0]);
+        printf("Usage: %s <fragment or analysis tree file>.\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -136,8 +166,8 @@ int main(int argc, char *argv[]) {
     TGriffin *pGriff = nullptr;
     pTree->SetBranchAddress("TGriffin", &pGriff);
 
-    TChannel *pChannel = nullptr;
-    TChannel::ReadCalFromTree(pTree);
+    //TChannel *pChannel = nullptr;
+    //TChannel::ReadCalFromTree(pTree);
 
     printf("Generating empty matrix");
     // Load energy matrix
@@ -162,16 +192,12 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < 64; i++) {
         printf("Starting new channel %d:\n", i);
 
-        pChannel = TChannel::GetChannelByNumber(i);
-
         // Project the project the histogram for the current channel
         TH1D *h_en = mat_en->ProjectionY(Form("h_%.2i", i), i + 1, i + 1);
 
         std::vector<double_t> EngDiff = {};
         std::vector<double_t> EngDiffErr = {};
         std::vector<double_t> EngX = {};
-        std::vector<double_t> ChargeX = {};
-        std::vector<double_t> EngXErr = {};
 
         // Fit all the peaks in our calibration and collect their centroids
         for (int k = 0; k < nPeaks; k++) {
@@ -187,7 +213,7 @@ int main(int argc, char *argv[]) {
             TSpectrum s;
             h_en->GetXaxis()->SetRangeUser(CalPeak - CalWidth,
                                            CalPeak + CalWidth);
-            s.Search(h_en, 2, "", 0.05);    // Hist, Sigma, Opt, Threshold
+            s.Search(h_en, 2, "", 0.15);    // Hist, Sigma, Opt, Threshold
             DataPeak = s.GetPositionX()[0]; // Grab most intense peak
 
             if ( DataPeak < 1 ) { // Errors commonly fall under this condition
@@ -216,71 +242,28 @@ int main(int argc, char *argv[]) {
                 printf(" difference of %g\n", EngDiff.back());
             EngX.push_back(DataPeak);
 
-            // Compute the charges from reported values to use as our xvalues
-            // Nov 24th: This is not needed!
-            /*
-            double_t offset = pChannel->GetENGCoeff()[0];
-            double_t slope = pChannel->GetENGCoeff()[1];
-            double_t Charge = (DataPeak - offset)/slope;
-            ChargeX.push_back(Charge);
-            */
-
             // Loop Cleanup
             delete CurPeak;
         }
 
-        // Boundary Condtions
-        // Unsure if these are needed in TGraph or TSpline
-        /*
-        EngX.insert(EngX.begin(), 0.0);
-        EngDiff.insert(EngDiff.begin(),0.0);
-        EngX.insert(EngX.end(), 5000.0);
-        EngDiff.insert(EngDiff.end(),0.0);
-        */
-
-        // Make TSpines
-        // Commented out due to changing TSplines to TGraphs in TGriffin
-        /*
-        TSpline *TempSpline =
-            new TSpline3("Energy Offset", EngX.data(), EngDiff.data(), nPeaks);
-        NonLinearityList->Add(TempSpline);
-        pGriff->LoadEnergyResidual(i, TempSpline);
-        */
+        // Boundary conditions to prevent too much exterpolation
+        EngX.push_back(EngX.back() + 10);
+        EngDiffErr.push_back(0.0);
+        EngDiff.push_back(0.0);
+        EngX.push_back(EngX.back() + 20);
+        EngDiffErr.push_back(0.0);
+        EngDiff.push_back(0.0);
 
         // Make a TGraph that can be used for interpolating the values
-        //TGraph* TempGraph = new TGraph(nPeaks , EngX.data(), EngDiff.data());
-        TGraph* TempGraph = new TGraph(nPeaks, EngX.data(), EngDiff.data());
+        TGraph* TempGraph = new TGraph(EngX.size(), EngX.data(), EngDiff.data());
         TempGraph->SetTitle("");
         LNonlinearitiesGraphs->Add(TempGraph);
-        //pGriff->LoadEnergyResidual(i, TempGraph);
 
         // Make a graph that represents this channel's offsets and errors
-        TGraphErrors* TempGraphErr = new TGraphErrors(nPeaks, EngX.data(),
+        TGraphErrors* TempGraphErr = new TGraphErrors(EngX.size(), EngX.data(),
                 EngDiff.data(), EngDiffErr.data(), EngDiffErr.data() );
         LNonlinearitiesGraphsErr->Add(TempGraphErr);
     }
-
-    TIter next = TIter(LNonlinearitiesGraphs->MakeIterator());
-    /*
-    printf("Overwriting energy matrix\n");
-    TH2D *mat_en_after = new TH2D("mat_en_after", "", 64, 0, 64, 5000, 0, 5000);
-    for ( int i = 0 ; i < 64 ; i++ ) {
-        TGraph* obj = (TGraph*) next();
-        pGriff->LoadEnergyResidual( i , obj );
-    }
-    // Load in Energy data and construct an energy matrix including
-    // the compensated energy residuals
-    if (gIsFragmentFile)
-        pTree->Project("mat_en_after", "TFragment.GetEnergy():"
-                                 "TFragment.GetChannelNumber()");
-    else
-        pTree->Project("mat_en_after",
-                       "TGriffin.fGriffinLowGainHits.GetEnergy():"
-                       "TGriffin.fGriffinLowGainHits.GetChannel().fNumber");
-
-    printf("Writing Energy Matrix\n");
-    mat_en_after->Write();
-    */
 
     // We want to make an extra directory to store all of our energy
     // residuals in. The assumption is made that these TGraphs are
@@ -290,6 +273,7 @@ int main(int argc, char *argv[]) {
 
     printf("Writing Non-Linarities\n");
     TDirectory* NonLinearDirectory;
+    TIter next = TIter(LNonlinearitiesGraphs->MakeIterator());
     if ( pFile->cd("Energy_Residuals") ) {
         NonLinearDirectory = gDirectory; // Set to current directory
         NonLinearDirectory->Delete("Graph;*");
@@ -311,6 +295,7 @@ int main(int argc, char *argv[]) {
         // cd(0) is the canvas itself
         // Iterate through all the TPads
         c1->cd(i);
+        gPad->SetTitle(Form("Digitizer %d", i));
         gPad->SetLeftMargin(0.05);
         gPad->SetBottomMargin(0.05);
         gPad->SetRightMargin(0.00);

@@ -302,7 +302,7 @@ int main(int argc, char **argv) {
     if (file->cd("Energy_Residuals")) {
         printf("Energy residuals found, loading...\n");
         TGraph* TempGraph;
-        for (int k = 0; k < 64; k++) {
+        for (int k = 1; k <= 64; k++) {
             gDirectory->GetObject(Form("Graph;%d", k), TempGraph);
             ResidualVec.push_back( TempGraph );
         }
