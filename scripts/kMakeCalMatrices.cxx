@@ -141,7 +141,7 @@ TList *LeanMatrices(TTree *tree, TPPG *ppg, TGRSIRunInfo *runInfo,
 
     printf("Loading in energy residuals\n");
     for (int k = 0; k < 64; k++) {
-        grif->LoadEnergyResidual(k, ResidualVec[k]);
+        grif->LoadEnergyResidual(k+1, ResidualVec[k]);
     }
 
     // Indices of the two hits being compared
@@ -302,8 +302,8 @@ int main(int argc, char **argv) {
     if (file->cd("Energy_Residuals")) {
         printf("Energy residuals found, loading...\n");
         TGraph* TempGraph;
-        for (int k = 1; k <= 64; k++) {
-            gDirectory->GetObject(Form("Graph;%d", k), TempGraph);
+        for (int k = 0 ; k < 64; k++) {
+            gDirectory->GetObject(Form("Graph;%d", k + 1), TempGraph);
             ResidualVec.push_back( TempGraph );
         }
     } else {

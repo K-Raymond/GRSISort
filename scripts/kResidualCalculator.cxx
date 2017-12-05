@@ -104,7 +104,7 @@ const std::vector<double_t> gPeaks = {
 //    907.34, // Double Peak
     1008.53,
     1054.3,
-    1222.51,
+//    1222.51,
 //    1781.54,
     1864.89,
     2118.26,
@@ -120,7 +120,7 @@ const std::vector<double_t> gWidths = {
 //    20,
     20,
     15,
-    20,
+//    20,
 //    20,
     20,
     20,

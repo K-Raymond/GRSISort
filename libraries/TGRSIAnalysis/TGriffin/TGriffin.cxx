@@ -167,9 +167,9 @@ void TGriffin::LoadEnergyResidual(int chan, TGraph* residual)
 
 Double_t TGriffin::GetEnergyNonlinearity(int chan, double energy)
 {
-   static int counter = 0;
-   counter++;
-   if(fEnergyResiduals.find(chan) != fEnergyResiduals.end()) {
+   //static int counter = 0;
+   //counter++;
+   if(fEnergyResiduals.find(chan) != fEnergyResiduals.end() ) {
       return fEnergyResiduals[chan]->Eval(energy);
    }
    return 0.0;
